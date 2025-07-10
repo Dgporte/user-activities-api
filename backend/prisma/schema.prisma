@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  name      String
+  email     String  @unique
+  cpf       String
+  password  String
+  avatar    String
+  xp        Int @default(0)
+  level     Int @default(1)
+  deletedAt DateTime?
+
+  achievements      UserAchievement[]
+  preferences       Preference[]
+  createdActivities Activity[]            @relation("CreatorActivities")
+  participations    ActivityParticipant[]
+}
+
+model Achievement {
+  id        String @id @default(uuid())
+  name      String
+  criterion String
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String @id @default(uuid())
+  achievementId String
+  userId        String
+
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+  user        User        @relation(fields: [userId], references: [id])
+}
+
+model ActiveAddress {
+  id         String @id @default(uuid())
+  activityId String @unique
+  latitude   Float
+  longitude  Float
+
+  activity Activity @relation(fields: [activityId], references: [id])
+}
+
+model Activity {
+  id               String    @id @default(uuid())
+  title            String
+  description      String
+  scheduledDate    DateTime
+  image            String
+  private          Boolean
+  creatorId        String
+  typeId           String
+  createdAt        DateTime @default(now())
+  deletedAt        DateTime?
+  completedAt      DateTime?
+  confirmationCode String?
+
+  address          Json?
+  activeAddress    ActiveAddress?  // Relacionamento com ActiveAddress
+
+  // Relacionamentos
+  creator          User            @relation("CreatorActivities", fields: [creatorId], references: [id])
+  type             ActivityType    @relation(fields: [typeId], references: [id])
+  participants     ActivityParticipant[]
+}
+
+model Preference {
+  id     String @id @default(uuid())
+  userId String
+  typeId String
+
+  user         User         @relation(fields: [userId], references: [id])
+  activityType ActivityType @relation(fields: [typeId], references: [id])
+
+  @@unique([userId, typeId])
+}
+
+model ActivityParticipant {
+  id          String    @id @default(uuid())
+  activityId  String
+  userId      String
+  approved    Boolean
+  confirmedAt DateTime?
+
+  activity Activity @relation(fields: [activityId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([activityId, userId])
+}
+
+model ActivityType {
+  id          String @id @default(uuid())
+  name        String
+  description String
+  image       String
+
+  activities  Activity[]
+  preferences Preference[]
+}

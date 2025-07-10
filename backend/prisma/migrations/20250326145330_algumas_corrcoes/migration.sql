@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Activity" ADD COLUMN     "address" JSONB,
+ALTER COLUMN "createdAt" SET DEFAULT CURRENT_TIMESTAMP;

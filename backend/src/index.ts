@@ -1,0 +1,2225 @@
+import "dotenv/config";
+import express, { json } from "express";
+import swaggerUi from "swagger-ui-express";
+import path from "path";
+import { Express } from "express-serve-static-core";
+import autenticacaoController from "./controllers/autenticacaoController";
+import userController from "./controllers/userController";
+import atividadeController from "./controllers/atividadeController";
+import { Server } from "http";
+import { initializeAchievements } from "./services/achievementService";
+
+const server = express();
+
+server.use(json());
+
+// Definição do documento Swagger
+const swaggerDocument = {
+  openapi: "3.0.0",
+  info: {
+    title: "API BackEnd",
+    version: "1.0.0",
+    description: "Documentação para a criação de usuários",
+  },
+  servers: [
+    {
+      url: "http://localhost:3000",
+    },
+  ],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+      },
+    },
+  },
+  paths: {
+    "/auth/register": {
+      post: {
+        summary: "Cadastro de usuário",
+        description: "Registra um novo usuário na aplicação",
+        tags: ["Autenticação"],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  name: {
+                    type: "string",
+                    example: "Diogo",
+                  },
+                  email: {
+                    type: "string",
+                    example: "diogo@email.com",
+                  },
+                  password: {
+                    type: "string",
+                    example: "123456",
+                  },
+                  cpf: {
+                    type: "string",
+                    example: "12345678900",
+                  },
+                },
+                required: ["name", "email", "password", "cpf"],
+              },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Usuário cadastrado com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    user: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          example: "1",
+                        },
+                        name: {
+                          type: "string",
+                          example: "Diogo",
+                        },
+                        email: {
+                          type: "string",
+                          example: "diogo@email.com",
+                        },
+                      },
+                    },
+                    token: {
+                      type: "string",
+                      example:
+                        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNjg2MzcxMjM2LCJleHBpcmVzSW4iOiIxaaRj",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Dados inválidos",
+          },
+        },
+      },
+    },
+    "/auth/login": {
+      post: {
+        summary: "Login de usuário",
+        description: "Realiza o login de um usuário e retorna um token JWT",
+        tags: ["Autenticação"],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  email: {
+                    type: "string",
+                    example: "diogo@email.com",
+                  },
+                  password: {
+                    type: "string",
+                    example: "123456",
+                  },
+                },
+                required: ["email", "password"],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Login bem-sucedido",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    user: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          example: "1",
+                        },
+                        name: {
+                          type: "string",
+                          example: "Diogo",
+                        },
+                        email: {
+                          type: "string",
+                          example: "diogo@email.com",
+                        },
+                      },
+                    },
+                    token: {
+                      type: "string",
+                      example:
+                        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNjg2MzcxMjM2LCJleHBpcmVzSW4iOiIxaaRj",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Credenciais inválidas",
+          },
+        },
+      },
+    },
+    "/users/{id}": {
+      get: {
+        summary: "Busca um usuário por ID",
+        description:
+          "Retorna os detalhes de um usuário específico com base no ID fornecido.",
+        tags: ["Usuários"],
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+            },
+            description: "ID do usuário a ser buscado",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Usuário encontrado com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    name: { type: "string" },
+                    email: { type: "string" },
+                    cpf: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          "404": {
+            description: "Usuário não encontrado",
+          },
+          "500": {
+            description: "Erro interno do servidor",
+          },
+        },
+      },
+      put: {
+        summary: "Atualiza um usuário",
+        description:
+          "Atualiza os dados de um usuário específico com base no ID fornecido.",
+        tags: ["Usuários"],
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+            },
+            description: "ID do usuário a ser atualizado",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  name: {
+                    type: "string",
+                    example: "Diogo",
+                  },
+                  email: {
+                    type: "string",
+                    example: "diogo@email.com",
+                  },
+                  cpf: {
+                    type: "string",
+                    example: "12345678900",
+                  },
+                },
+                required: ["name", "email", "cpf"],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Usuário atualizado com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    name: { type: "string" },
+                    email: { type: "string" },
+                    cpf: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Dados inválidos",
+          },
+          "404": {
+            description: "Usuário não encontrado",
+          },
+          "500": {
+            description: "Erro interno do servidor",
+          },
+        },
+      },
+      delete: {
+        summary: "Soft delete de um usuário",
+        description:
+          "Marca um usuário como deletado sem removê-lo fisicamente do banco de dados.",
+        tags: ["Usuários"],
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+            },
+            description: "ID do usuário a ser deletado",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Usuário marcado como deletado com sucesso",
+          },
+          "404": {
+            description: "Usuário não encontrado",
+          },
+          "500": {
+            description: "Erro interno do servidor",
+          },
+        },
+      },
+    },
+    "/users/{id}/preferences": {
+      get: {
+        summary: "Busca as preferências de um usuário",
+        description:
+          "Retorna as preferências de um usuário específico com base no ID fornecido, incluindo tipo, nome e descrição.",
+        tags: ["Usuários"],
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+            },
+            description: "ID do usuário cujas preferências serão buscadas",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Preferências do usuário encontradas com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      typeId: {
+                        type: "string",
+                        description: "ID do tipo de atividade",
+                      },
+                      typeName: {
+                        type: "string",
+                        description: "Nome do tipo de atividade",
+                      },
+                      typeDescription: {
+                        type: "string",
+                        description: "Descrição do tipo de atividade",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "404": {
+            description: "Preferências não encontradas",
+          },
+          "500": {
+            description: "Erro interno do servidor",
+          },
+        },
+      },
+    },
+    "/users/preferences/define": {
+      post: {
+        summary: "Definir preferências do usuário",
+        description:
+          "Permite que o usuário defina suas preferências de tipos de atividades",
+        tags: ["Usuários"],
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  userId: {
+                    type: "string",
+                    example: "f8b77ff9-5c9d-4bda-91a7-f5d362702fda",
+                  },
+                  typeId: {
+                    type: "string",
+                    example: "d1b8c4b2-6e1c-4e92-b2b2-90858a3cb93d",
+                  },
+                },
+                required: ["userId", "typeId"],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Preferência definida com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    id: {
+                      type: "string",
+                      example: "d3a62b9b-6899-4cc8-b64a-078b62a34b76",
+                    },
+                    userId: {
+                      type: "string",
+                      example: "f8b77ff9-5c9d-4bda-91a7-f5d362702fda",
+                    },
+                    typeId: {
+                      type: "string",
+                      example: "d1b8c4b2-6e1c-4e92-b2b2-90858a3cb93d",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Dados inválidos",
+          },
+          "404": {
+            description: "Usuário ou tipo de atividade não encontrado",
+          },
+        },
+      },
+    },
+    "/users/avatar": {
+      put: {
+        summary: "Atualiza a foto de perfil do usuário",
+        description:
+          "Permite que o usuário autenticado altere sua foto de perfil.",
+        operationId: "updateUserAvatar",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        tags: ["Usuários"],
+        parameters: [
+          {
+            in: "body",
+            name: "avatar",
+            description: "Avatar (imagem) a ser atualizado",
+            required: true,
+            schema: {
+              type: "object",
+              properties: {
+                avatar: {
+                  type: "string",
+                  format: "binary",
+                  example: "data:image/png;base64,....",
+                },
+              },
+              required: ["avatar"],
+            },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Foto de perfil atualizada com sucesso",
+            schema: {
+              type: "object",
+              properties: {
+                message: {
+                  type: "string",
+                  example: "Foto de perfil atualizada com sucesso",
+                },
+                avatar: {
+                  type: "string",
+                  example: "data:image/png;base64,....",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Avatar é obrigatório",
+            schema: {
+              type: "object",
+              properties: {
+                message: {
+                  type: "string",
+                  example: "Avatar é obrigatório",
+                },
+              },
+            },
+          },
+          "404": {
+            description: "Usuário não encontrado",
+            schema: {
+              type: "object",
+              properties: {
+                message: {
+                  type: "string",
+                  example: "Usuário não encontrado",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Erro interno do servidor",
+            schema: {
+              type: "object",
+              properties: {
+                message: {
+                  type: "string",
+                  example: "Erro interno do servidor",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    definitions: {
+      User: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            example: "12345",
+          },
+          avatar: {
+            type: "string",
+            example: "data:image/png;base64,....",
+          },
+        },
+      },
+    },
+    securityDefinitions: {
+      bearerAuth: {
+        type: "apiKey",
+        name: "Authorization",
+        in: "header",
+        description: "Bearer token de autenticação",
+      },
+    },
+    "/atividades/types": {
+      summary: "Operações relacionadas às atividades",
+      description: "Criação e consulta de atividades no sistema",
+      tags: ["Atividades"],
+      get: {
+        summary: "Busca todos os tipos de atividade",
+        description:
+          "Retorna todos os tipos de atividades cadastrados no sistema.",
+        operationId: "getAllTypes",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        tags: ["Atividades"],
+        responses: {
+          "200": {
+            description: "Tipos de atividades encontrados com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      id: {
+                        type: "string",
+                        description: "ID do tipo de atividade",
+                      },
+                      name: {
+                        type: "string",
+                        description: "Nome do tipo de atividade",
+                      },
+                      description: {
+                        type: "string",
+                        description: "Descrição do tipo de atividade",
+                      },
+                      image: {
+                        type: "string",
+                        description: "URL da imagem do tipo de atividade",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "404": {
+            description: "Nenhum tipo de atividade encontrado",
+          },
+          "500": {
+            description: "Erro interno do servidor",
+          },
+        },
+      },
+      post: {
+        summary: "Cria uma nova atividade",
+        description: "Endpoint para criar uma nova atividade no sistema",
+        operationId: "createActivity",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        tags: ["Atividades"],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  title: {
+                    type: "string",
+                    description: "Título da atividade",
+                  },
+                  description: {
+                    type: "string",
+                    description: "Descrição da atividade",
+                  },
+                  typeId: {
+                    type: "string",
+                    description: "ID do tipo de atividade",
+                  },
+                  scheduledDate: {
+                    type: "string",
+                    format: "date-time",
+                    description: "Data e hora agendada para a atividade",
+                  },
+                  image: {
+                    type: "string",
+                    description: "URL da imagem associada à atividade",
+                  },
+                  private: {
+                    type: "boolean",
+                    description: "Indica se a atividade é privada",
+                  },
+                  creatorId: {
+                    type: "string",
+                    description: "ID do criador da atividade",
+                  },
+                  latitude: {
+                    type: "number",
+                    format: "float",
+                    description: "Latitude do endereço da atividade",
+                  },
+                  longitude: {
+                    type: "number",
+                    format: "float",
+                    description: "Longitude do endereço da atividade",
+                  },
+                },
+                required: [
+                  "title",
+                  "description",
+                  "typeId",
+                  "scheduledDate",
+                  "image",
+                  "private",
+                  "creatorId",
+                  "latitude",
+                  "longitude",
+                ],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Atividade criada com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    id: {
+                      type: "string",
+                      description: "ID da atividade",
+                    },
+                    title: {
+                      type: "string",
+                      description: "Título da atividade",
+                    },
+                    description: {
+                      type: "string",
+                      description: "Descrição da atividade",
+                    },
+                    type: {
+                      type: "string",
+                      description: "Tipo da atividade",
+                    },
+                    image: {
+                      type: "string",
+                      description: "URL da imagem associada à atividade",
+                    },
+                    address: {
+                      type: "object",
+                      properties: {
+                        latitude: {
+                          type: "number",
+                          format: "float",
+                          description: "Latitude do endereço",
+                        },
+                        longitude: {
+                          type: "number",
+                          format: "float",
+                          description: "Longitude do endereço",
+                        },
+                      },
+                    },
+                    scheduledDate: {
+                      type: "string",
+                      format: "date-time",
+                      description: "Data e hora agendada para a atividade",
+                    },
+                    private: {
+                      type: "boolean",
+                      description: "Indica se a atividade é privada",
+                    },
+                    createdAt: {
+                      type: "string",
+                      format: "date-time",
+                      description: "Data de criação da atividade",
+                    },
+                    completedAt: {
+                      type: "string",
+                      format: "date-time",
+                      description: "Data de conclusão da atividade",
+                    },
+                    creator: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          description: "ID do criador",
+                        },
+                        name: {
+                          type: "string",
+                          description: "Nome do criador",
+                        },
+                        avatar: {
+                          type: "string",
+                          description: "URL do avatar do criador",
+                        },
+                      },
+                    },
+                    userSubscriptionStatus: {
+                      type: "string",
+                      description: "Status da inscrição do usuário",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Requisição inválida",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    error: {
+                      type: "string",
+                      description: "Mensagem de erro",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/atividades/{id}": {
+      put: {
+        summary: "Atualiza uma atividade",
+        description: "Atualiza os dados de uma atividade existente.",
+        tags: ["Atividades"],
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+            },
+            description: "ID da atividade a ser atualizada",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  description: { type: "string" },
+                  typeId: { type: "string" },
+                  image: { type: "string" },
+                  latitude: { type: "number", format: "float" },
+                  longitude: { type: "number", format: "float" },
+                  scheduledDate: { type: "string", format: "date-time" },
+                  privateActivity: { type: "boolean" },
+                  creatorId: { type: "string" },
+                  completedAt: { type: "string", format: "date-time" },
+                },
+                required: ["title", "description", "typeId", "scheduledDate"],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Atividade atualizada com sucesso",
+          },
+          "400": {
+            description: "Requisição inválida",
+          },
+          "404": {
+            description: "Atividade não encontrada",
+          },
+          "500": {
+            description: "Erro interno do servidor",
+          },
+        },
+      },
+      delete: {
+        summary: "Exclui uma atividade",
+        description: "Exclui uma atividade existente no sistema.",
+        tags: ["Atividades"],
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+            },
+            description: "ID da atividade a ser excluída",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Atividade excluída com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: {
+                      type: "string",
+                      description: "Mensagem de confirmação de exclusão",
+                    },
+                    deletedActivity: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          description: "ID da atividade",
+                        },
+                        title: {
+                          type: "string",
+                          description: "Título da atividade",
+                        },
+                        description: {
+                          type: "string",
+                          description: "Descrição da atividade",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Requisição inválida",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    error: {
+                      type: "string",
+                      description: "Mensagem de erro",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "404": {
+            description: "Atividade não encontrada",
+          },
+          "500": {
+            description: "Erro interno do servidor",
+          },
+        },
+      },
+    },
+    "/atividades/{id}/subscribe": {
+      post: {
+        summary: "Inscrever-se em uma atividade",
+        description:
+          "Endpoint para inscrever-se em uma atividade. O usuário deve fornecer seu ID para se inscrever na atividade especificada.",
+        operationId: "subscribeToActivity",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        tags: ["Atividades"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+            },
+            description: "ID da atividade em que o usuário deseja se inscrever",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  userId: {
+                    type: "string",
+                    description:
+                      "ID do usuário que deseja se inscrever na atividade",
+                  },
+                },
+                required: ["userId"],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Inscrição realizada com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: {
+                      type: "string",
+                      description: "Mensagem de sucesso da inscrição",
+                    },
+                    subscription: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          description: "ID da inscrição",
+                        },
+                        userId: {
+                          type: "string",
+                          description: "ID do usuário",
+                        },
+                        activityId: {
+                          type: "string",
+                          description: "ID da atividade",
+                        },
+                        approved: {
+                          type: "boolean",
+                          description: "Status da aprovação da inscrição",
+                        },
+                        confirmedAt: {
+                          type: "string",
+                          format: "date-time",
+                          description:
+                            "Data e hora de confirmação da inscrição",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Requisição inválida",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    error: {
+                      type: "string",
+                      description: "Mensagem de erro",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "404": {
+            description: "Atividade não encontrada",
+          },
+          "500": {
+            description: "Erro interno do servidor",
+          },
+        },
+      },
+    },
+    "/atividades/{id}/unsubscribe": {
+      delete: {
+        summary: "Desinscrever-se de uma atividade",
+        description:
+          "Endpoint para cancelar a inscrição de um usuário em uma atividade.",
+        tags: ["Atividades"],
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+            },
+            description:
+              "ID da atividade da qual o usuário deseja se desinscrever",
+          },
+        ],
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  userId: {
+                    type: "string",
+                    description:
+                      "ID do usuário que deseja cancelar a participação",
+                  },
+                },
+                required: ["userId"],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Participação cancelada com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: {
+                      type: "string",
+                      description:
+                        "Mensagem de sucesso ao cancelar a inscrição",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "ID do usuário não fornecido ou inválido",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    error: {
+                      type: "string",
+                      description: "Erro de validação do ID do usuário",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "404": {
+            description:
+              "Participação não encontrada ou usuário não inscrito na atividade",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    error: {
+                      type: "string",
+                      description: "Erro de não encontrar a participação",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Erro interno do servidor",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    error: {
+                      type: "string",
+                      description: "Mensagem de erro interno",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/atividades/participant/all": {
+      summary: "Busca todas as atividades de um usuário participante",
+      description:
+        "Retorna todas as atividades relacionadas a um usuário autenticado no sistema.",
+      tags: ["Atividades"],
+      security: [
+        {
+          bearerAuth: [],
+        },
+      ],
+      get: {
+        summary: "Busca atividades de um usuário",
+        description:
+          "Este endpoint retorna todas as atividades associadas ao usuário autenticado.",
+        operationId: "getUserActivities",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        tags: ["Atividades"],
+        responses: {
+          "200": {
+            description: "Atividades do usuário encontradas com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      id: {
+                        type: "string",
+                        description: "ID da atividade",
+                      },
+                      title: {
+                        type: "string",
+                        description: "Título da atividade",
+                      },
+                      description: {
+                        type: "string",
+                        description: "Descrição da atividade",
+                      },
+                      scheduledDate: {
+                        type: "string",
+                        format: "date-time",
+                        description: "Data e hora agendada para a atividade",
+                      },
+                      image: {
+                        type: "string",
+                        description: "URL da imagem associada à atividade",
+                      },
+                      private: {
+                        type: "boolean",
+                        description: "Indica se a atividade é privada",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "404": {
+            description: "Nenhuma atividade encontrada para o usuário",
+          },
+          "500": {
+            description: "Erro interno do servidor",
+          },
+        },
+      },
+    },
+    "/atividades/{id}/conclude": {
+      put: {
+        summary: "Concluir uma atividade",
+        description: "Endpoint para concluir uma atividade.",
+        operationId: "concludeActivity",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        tags: ["Atividades"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+              description: "ID da atividade a ser concluída",
+            },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Atividade concluída com sucesso.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: {
+                      type: "string",
+                      example: "Atividade concluída com sucesso.",
+                    },
+                    updatedActivity: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          description: "ID da atividade",
+                        },
+                        title: {
+                          type: "string",
+                          description: "Título da atividade",
+                        },
+                        completedAt: {
+                          type: "string",
+                          format: "date-time",
+                          description: "Data e hora de conclusão da atividade",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "403": {
+            description:
+              "Autenticação necessária ou você não tem permissão para concluir esta atividade.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    error: {
+                      type: "string",
+                      example:
+                        "Autenticação necessária ou você não tem permissão para concluir esta atividade.",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "404": {
+            description: "Atividade não encontrada.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    error: {
+                      type: "string",
+                      example: "Atividade não encontrada.",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Erro interno do servidor.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    error: {
+                      type: "string",
+                      example: "Erro inesperado.",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/atividades/{id}/participants": {
+      get: {
+        summary: "Buscar participantes de uma atividade",
+        description:
+          "Este endpoint permite que você busque os participantes de uma atividade específica.",
+        operationId: "getActivityParticipants",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        tags: ["Atividades"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            description: "ID da atividade",
+            schema: {
+              type: "string",
+              example: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Lista de participantes da atividade",
+            content: {
+              "application/json": {
+                example: [
+                  {
+                    id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    userId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    name: "Nome do Participante",
+                    avatar: "URL do Avatar",
+                    subscriptionStatus: "Aprovado",
+                    confirmedAt: "2025-03-20T11:09:42.0922",
+                  },
+                ],
+              },
+            },
+          },
+          "400": {
+            description: "ID da atividade é obrigatório",
+          },
+          "404": {
+            description: "Nenhum participante encontrado",
+          },
+          "500": {
+            description: "Erro ao buscar participantes",
+          },
+        },
+      },
+    },
+    "/atividades/user/participant": {
+      get: {
+        summary: "Buscar atividades em que o usuário se inscreveu",
+        description:
+          "Este endpoint permite que você busque as atividades em que o usuário logado está inscrito.",
+        operationId: "getUserActivities",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        tags: ["Atividades"],
+        parameters: [
+          {
+            name: "page",
+            in: "query",
+            required: false,
+            description: "Número da página",
+            schema: {
+              type: "integer",
+              example: 1,
+            },
+          },
+          {
+            name: "pageSize",
+            in: "query",
+            required: false,
+            description: "Tamanho da página",
+            schema: {
+              type: "integer",
+              example: 10,
+            },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Lista de atividades em que o usuário está inscrito",
+            content: {
+              "application/json": {
+                example: {
+                  activities: [
+                    {
+                      id: "3fa85164-5717-4562-1b3fc-2c963f66afa6",
+                      title: "Atividade Exemplo",
+                      description: "Descrição da atividade",
+                      type: "Esporte",
+                      image: "https://example.com/imagem.jpg",
+                      participantCount: 5,
+                      address: {
+                        latitude: 40.7128,
+                        longitude: -74.006,
+                      },
+                      scheduledDate: "2025-03-20T11:09:42.0922",
+                      creator: {
+                        id: "3fa85164-5717-4562-b3fc-7c963f6bafall",
+                        name: "Criador da Atividade",
+                        avatar: "https://example.com/avatar.jpg",
+                      },
+                    },
+                  ],
+                  totalActivities: 1,
+                  totalPages: 1,
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Erro ao buscar atividades",
+          },
+          "500": {
+            description: "Erro interno do servidor",
+          },
+        },
+      },
+    },
+    "/atividades/user/creator/all": {
+      get: {
+        summary: "Buscar todas as atividades criadas pelo usuário",
+        description:
+          "Este endpoint permite que você busque todas as atividades criadas pelo usuário logado.",
+        operationId: "getActivitiesCreatedByUser",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        tags: ["Atividades"],
+        responses: {
+          "200": {
+            description: "Lista de atividades criadas pelo usuário",
+            content: {
+              "application/json": {
+                example: [
+                  {
+                    id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    title: "Título da Atividade",
+                    description: "Descrição da Atividade",
+                    type: "Tipo de Atividade",
+                    image: "URL da Imagem",
+                    confirmationCode: "Código de Confirmação",
+                    participantCount: 0,
+                    address: {
+                      latitude: 0,
+                      longitude: 0,
+                    },
+                    scheduledDate: "2025-03-26T17:18:40.7437",
+                    createdAt: "2025-03-26T17:18:40.7432",
+                    completedAt: "2025-03-26T17:18:40.7432",
+                    private: true,
+                    creator: {
+                      id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                      name: "Nome do Criador",
+                      avatar: "URL do Avatar",
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          "400": {
+            description: "Usuário não autenticado",
+          },
+          "500": {
+            description: "Erro ao buscar atividades",
+          },
+        },
+      },
+    },
+    "/atividades/user/creator": {
+      get: {
+        summary: "Buscar atividades criadas pelo usuário",
+        description:
+          "Este endpoint permite que você busque as atividades criadas pelo usuário logado de forma paginada.",
+        operationId: "getUserCreatedActivities",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        tags: ["Atividades"],
+        parameters: [
+          {
+            name: "page",
+            in: "query",
+            required: false,
+            schema: {
+              type: "integer",
+              example: 1,
+            },
+          },
+          {
+            name: "pageSize",
+            in: "query",
+            required: false,
+            schema: {
+              type: "integer",
+              example: 10,
+            },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Atividades criadas pelo usuário com sucesso.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    page: {
+                      type: "integer",
+                      example: 1,
+                    },
+                    pageSize: {
+                      type: "integer",
+                      example: 10,
+                    },
+                    totalActivities: {
+                      type: "integer",
+                      example: 100,
+                    },
+                    totalPages: {
+                      type: "integer",
+                      example: 10,
+                    },
+                    activities: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          id: {
+                            type: "string",
+                            example: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          },
+                          title: {
+                            type: "string",
+                            example: "Atividade Exemplo",
+                          },
+                          description: {
+                            type: "string",
+                            example: "Descrição da atividade",
+                          },
+                          type: {
+                            type: "string",
+                            example: "Tipo da atividade",
+                          },
+                          image: {
+                            type: "string",
+                            example: "url_da_imagem",
+                          },
+                          confirmationCode: {
+                            type: "string",
+                            example: "confirmação-xyz",
+                          },
+                          participantCount: {
+                            type: "integer",
+                            example: 5,
+                          },
+                          address: {
+                            type: "object",
+                            properties: {
+                              latitude: {
+                                type: "number",
+                                example: 40.7128,
+                              },
+                              longitude: {
+                                type: "number",
+                                example: -74.006,
+                              },
+                            },
+                          },
+                          scheduledDate: {
+                            type: "string",
+                            format: "date-time",
+                            example: "2025-03-20T18:05:31.5267",
+                          },
+                          createdAt: {
+                            type: "string",
+                            format: "date-time",
+                            example: "2025-03-20T18:05:31.5267",
+                          },
+                          completedAt: {
+                            type: "string",
+                            format: "date-time",
+                            example: "2025-03-20T18:05:31.5262",
+                          },
+                          private: {
+                            type: "boolean",
+                            example: true,
+                          },
+                          creator: {
+                            type: "object",
+                            properties: {
+                              id: {
+                                type: "string",
+                                example: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                              },
+                              name: {
+                                type: "string",
+                                example: "Nome do Criador",
+                              },
+                              avatar: {
+                                type: "string",
+                                example: "url_avatar",
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Parâmetros inválidos",
+          },
+          "500": {
+            description: "Erro interno do servidor",
+          },
+        },
+      },
+    },
+    "/atividades/all": {
+      get: {
+        summary: "Listar todas as atividades com filtro por tipo e ordenação",
+        tags: ["Atividades"],
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "typeId",
+            in: "query",
+            description: "Filtrar atividades por tipo",
+            required: false,
+            schema: {
+              type: "string",
+              example: "12",
+            },
+          },
+          {
+            name: "orderBy",
+            in: "query",
+            description: "Campo pelo qual ordenar as atividades",
+            required: false,
+            schema: {
+              type: "string",
+              example: "createdAt",
+            },
+          },
+          {
+            name: "order",
+            in: "query",
+            description: "Ordenação das atividades: 'asc' ou 'desc'",
+            required: false,
+            schema: {
+              type: "string",
+              enum: ["asc", "desc"],
+              example: "desc",
+            },
+          },
+          {
+            name: "page",
+            in: "query",
+            description: "Número da página",
+            required: false,
+            schema: {
+              type: "integer",
+              example: 1,
+            },
+          },
+          {
+            name: "pageSize",
+            in: "query",
+            description: "Tamanho da página",
+            required: false,
+            schema: {
+              type: "integer",
+              example: 10,
+            },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Atividades listadas com sucesso",
+            content: {
+              "application/json": {
+                example: {
+                  page: 1,
+                  pageSize: 10,
+                  totalActivities: 100,
+                  totalPages: 10,
+                  activities: [
+                    {
+                      id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                      title: "Atividade 1",
+                      description: "Descrição da atividade 1",
+                      type: "Workshop",
+                      image: "url_da_imagem",
+                      confirmationCode: "abc123",
+                      participantCount: 50,
+                      address: {
+                        latitude: 0,
+                        longitude: 0,
+                      },
+                      scheduledDate: "2025-03-26T17:18:40.7437",
+                      createdAt: "2025-03-26T17:18:40.7432",
+                      completedAt: "2025-03-26T17:18:40.7432",
+                      private: true,
+                      creator: {
+                        id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        name: "João",
+                        avatar: "url_avatar",
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Usuário não autenticado",
+            content: {
+              "application/json": {
+                example: {
+                  error: "Usuário não autenticado.",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Erro interno do servidor",
+            content: {
+              "application/json": {
+                example: {
+                  error: "Erro ao buscar atividades.",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/atividades": {
+      get: {
+        summary:
+          "Listar atividades com paginação, filtragem por tipo e ordenação",
+        description:
+          "Este endpoint retorna atividades paginadas, com filtro por tipo e ordenação por um campo específico.",
+        operationId: "getActivities",
+        tags: ["Atividades"],
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "page",
+            in: "query",
+            description: "Número da página.",
+            required: false,
+            schema: {
+              type: "integer",
+              default: 1,
+            },
+          },
+          {
+            name: "pageSize",
+            in: "query",
+            description: "Tamanho da página.",
+            required: false,
+            schema: {
+              type: "integer",
+              default: 10,
+            },
+          },
+          {
+            name: "typeId",
+            in: "query",
+            description: "Filtrar atividades por tipo.",
+            required: false,
+            schema: {
+              type: "string",
+            },
+          },
+          {
+            name: "orderBy",
+            in: "query",
+            description: "Campo pelo qual ordenar as atividades.",
+            required: false,
+            schema: {
+              type: "string",
+              default: "createdAt",
+            },
+          },
+          {
+            name: "order",
+            in: "query",
+            description:
+              "Ordem pela qual ordenar as atividades. Pode ser 'asc' para crescente ou 'desc' para decrescente.",
+            required: false,
+            schema: {
+              type: "string",
+              enum: ["asc", "desc"],
+              default: "desc",
+            },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    page: {
+                      type: "integer",
+                      example: 1,
+                    },
+                    pageSize: {
+                      type: "integer",
+                      example: 10,
+                    },
+                    totalActivities: {
+                      type: "integer",
+                      example: 100,
+                    },
+                    totalPages: {
+                      type: "integer",
+                      example: 10,
+                    },
+                    previous: {
+                      type: "string",
+                      nullable: true,
+                      example: "/activities?page=1&pageSize=10",
+                    },
+                    next: {
+                      type: "string",
+                      nullable: true,
+                      example: "/activities?page=2&pageSize=10",
+                    },
+                    activities: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          id: {
+                            type: "string",
+                            example: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          },
+                          title: {
+                            type: "string",
+                            example: "Atividade Exemplo",
+                          },
+                          description: {
+                            type: "string",
+                            example: "Descrição da atividade",
+                          },
+                          type: {
+                            type: "string",
+                            example: "Esporte",
+                          },
+                          image: {
+                            type: "string",
+                            example: "https://example.com/imagem.jpg",
+                          },
+                          confirmationCode: {
+                            type: "string",
+                            example: "ABC123",
+                          },
+                          participantCount: {
+                            type: "integer",
+                            example: 5,
+                          },
+                          address: {
+                            type: "object",
+                            properties: {
+                              latitude: {
+                                type: "number",
+                                example: 40.7128,
+                              },
+                              longitude: {
+                                type: "number",
+                                example: -74.006,
+                              },
+                            },
+                          },
+                          scheduledDate: {
+                            type: "string",
+                            example: "2025-03-20T11:09:42.0922",
+                          },
+                          createdAt: {
+                            type: "string",
+                            example: "2025-03-20T11:09:42.0922",
+                          },
+                          completedAt: {
+                            type: "string",
+                            example: "2025-03-20T11:09:42.0922",
+                          },
+                          private: {
+                            type: "boolean",
+                            example: true,
+                          },
+                          creator: {
+                            type: "object",
+                            properties: {
+                              id: {
+                                type: "string",
+                                example: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                              },
+                              name: {
+                                type: "string",
+                                example: "Criador da Atividade",
+                              },
+                              avatar: {
+                                type: "string",
+                                example: "https://example.com/avatar.jpg",
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Unauthorized",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    error: {
+                      type: "string",
+                      example: "Unauthorized",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/atividades/{id}/check-in": {
+      put: {
+        summary:
+          "Fazer check-in em uma atividade utilizando código de confirmação",
+        description:
+          "Este endpoint permite que um usuário faça check-in em uma atividade fornecendo o código de confirmação.",
+        operationId: "checkInActivity",
+        tags: ["Atividades"],
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            description:
+              "ID da atividade em que o usuário deseja fazer check-in",
+            required: true,
+            schema: {
+              type: "string",
+              example: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  confirmationCode: {
+                    type: "string",
+                    example: "ABCDE",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Check-in realizado com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: {
+                      type: "string",
+                      example: "Check-in realizado com sucesso!",
+                    },
+                    data: {
+                      type: "object",
+                      properties: {
+                        id: {
+                          type: "string",
+                          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        },
+                        activityId: {
+                          type: "string",
+                          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        },
+                        userId: {
+                          type: "string",
+                          example: "d6e2994b-f120-470b-9b77-e836fe8e9da5",
+                        },
+                        approved: {
+                          type: "boolean",
+                          example: true,
+                        },
+                        confirmedAt: {
+                          type: "string",
+                          example: "2025-03-20T11:09:42.0922",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Código de confirmação inválido ou erro no check-in",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    error: {
+                      type: "string",
+                      example: "Código de confirmação inválido",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/atividades/{id}/approve": {
+      put: {
+        summary:
+          "Aprovar ou negar inscrição de participante em atividade privada",
+        description:
+          "Endpoint para aprovar ou negar a inscrição de um participante em uma atividade privada.",
+        operationId: "approveParticipation",
+        tags: ["Atividades"],
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            description: "ID da atividade",
+            schema: {
+              type: "string",
+              format: "uuid",
+            },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  participantId: {
+                    type: "string",
+                    format: "uuid",
+                    description: "ID do participante",
+                  },
+                  approved: {
+                    type: "boolean",
+                    description:
+                      "Status da aprovação (true = aprovado, false = negado)",
+                  },
+                },
+                required: ["participantId", "approved"],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Participação aprovada ou negada com sucesso",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: {
+                      type: "string",
+                      example: "Participação aprovada com sucesso.",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Erro ao processar a solicitação",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    error: {
+                      type: "string",
+                      example: "Erro desconhecido",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+// Configuração do Swagger
+server.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+// Inicializa as conquistas e inicia o servidor
+(async () => {
+  try {
+    // Inicializa as conquistas no banco de dados
+    await initializeAchievements();
+    console.log("Conquistas inicializadas com sucesso");
+
+    // Configura os controllers
+    userController(server);
+    autenticacaoController(server);
+    atividadeController(server);
+
+    const port = process.env.PORT || 3000;
+
+    server.listen(port, () => {
+      console.log(`Servidor rodando na porta ${port}`);
+    });
+  } catch (error) {
+    console.error("Erro ao inicializar o servidor:", error);
+    process.exit(1);
+  }
+})();

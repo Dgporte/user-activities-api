@@ -1,0 +1,42 @@
+# Node.js
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# TypeScript
+dist/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ambiente
+.env
+.env.local
+.env.*.local
+
+# Cache
+.cache/
+.tmp/
+
+# Testes
+coverage/
+jest/
+*.test.ts
+*.spec.ts
+
+# Docker (se estiver usando)
+docker-compose.override.yml
