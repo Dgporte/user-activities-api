@@ -2,20 +2,30 @@
 
 Este projeto consiste em uma API RESTful desenvolvida com Node.js, Express e Prisma ORM, criada para gerenciar atividades e grupos de usuários, com sistema de níveis, conquistas e experiência.
 
+---
+
+## Visão Geral
+
+O sistema foi idealizado para facilitar o gerenciamento de atividades em grupo, proporcionando uma experiência gamificada através de níveis, conquistas (badges) e pontuação de experiência (XP). Ele pode ser utilizado em contextos como escolas, clubes, empresas ou qualquer organização que deseje acompanhar a participação e engajamento de seus membros em eventos ou tarefas.
+
+O backend está totalmente desacoplado do frontend, permitindo integração fácil com aplicações web, mobile ou outras interfaces via API.
+
+---
+
 ## Funcionalidades Principais
 
 ### Autenticação e Gerenciamento de Usuários
 
-- **Registro de Usuário**: Criação de contas com nome, email, senha e CPF
-- **Login**: Autenticação via JWT
-- **Perfil de Usuário**: Visualização e edição de dados pessoais
-- **Avatar**: Upload e atualização de imagens de perfil
-- **Exclusão Lógica**: Possibilidade de desativar conta (soft delete)
+- **Registro de Usuário**: Criação de contas com nome, email, senha e CPF.
+- **Login**: Autenticação via JWT.
+- **Perfil de Usuário**: Visualização e edição de dados pessoais.
+- **Avatar**: Upload e atualização de imagens de perfil.
+- **Exclusão Lógica**: Possibilidade de desativar conta (soft delete).
 
 ### Sistema de Progressão
 
-- **Experiência (XP)**: Usuários ganham XP por realizar ações no sistema
-- **Níveis**: Progressão automática baseada no acúmulo de XP
+- **Experiência (XP)**: Usuários ganham XP por realizar ações no sistema.
+- **Níveis**: Progressão automática baseada no acúmulo de XP.
 - **Conquistas**: Badges concedidas por ações específicas:
   - Primeiro Check-in
   - Criador de Atividade
@@ -25,26 +35,47 @@ Este projeto consiste em uma API RESTful desenvolvida com Node.js, Express e Pri
 
 ### Gerenciamento de Atividades
 
-- **Criação de Atividades**: Com título, descrição, data, localização e imagem
-- **Tipos de Atividades**: Categorização por tipo (esporte, educação, etc.)
-- **Atividades Privadas/Públicas**: Controle de visibilidade e aprovação de participantes
-- **Gerenciamento de Participantes**: Visualização, aprovação/rejeição de solicitações
-- **Check-in**: Confirmação de presença via código
-- **Conclusão de Atividades**: Marcação de atividades como concluídas
-- **Busca Geolocalizada**: Encontrar atividades próximas por raio de distância
+- **Criação de Atividades**: Com título, descrição, data, localização e imagem.
+- **Tipos de Atividades**: Categorização por tipo (esporte, educação, etc.).
+- **Atividades Privadas/Públicas**: Controle de visibilidade e aprovação de participantes.
+- **Gerenciamento de Participantes**: Visualização, aprovação/rejeição de solicitações.
+- **Check-in**: Confirmação de presença via código.
+- **Conclusão de Atividades**: Marcação de atividades como concluídas.
+- **Busca Geolocalizada**: Encontrar atividades próximas por raio de distância.
+
+### Outras Funcionalidades
+
+- **Notificações**: Envio de notificações para usuários a respeito de atividades ou mudanças de status (pode ser integrado via serviços externos).
+- **Preferências de Usuário**: Cada usuário pode definir preferências para personalizar sua experiência.
+- **Estatísticas**: Usuário pode consultar estatísticas de participação, XP, conquistas e progresso.
+
+---
 
 ## Tecnologias Utilizadas
 
-- **Node.js**: Ambiente de execução JavaScript
-- **Express**: Framework web
-- **TypeScript**: Linguagem de programação tipada
-- **Prisma ORM**: ORM para comunicação com o banco de dados
-- **PostgreSQL**: Banco de dados relacional
-- **JWT**: Autenticação e autorização
-- **Bcrypt**: Criptografia de senhas
-- **Swagger**: Documentação da API
-- **Zod**: Validação de dados
-- **LocalStack/AWS S3**: Armazenamento de imagens
+- **Node.js**: Ambiente de execução JavaScript.
+- **Express**: Framework web.
+- **TypeScript**: Linguagem de programação tipada.
+- **Prisma ORM**: ORM para comunicação com o banco de dados.
+- **PostgreSQL**: Banco de dados relacional.
+- **JWT**: Autenticação e autorização.
+- **Bcrypt**: Criptografia de senhas.
+- **Swagger**: Documentação da API.
+- **Zod**: Validação de dados.
+- **LocalStack/AWS S3**: Armazenamento de imagens.
+- **Docker**: Facilita o deploy e o setup do ambiente de desenvolvimento.
+
+---
+
+## Fluxo de Uso
+
+1. **Cadastro**: Usuário faz o registro na plataforma, define preferências e personaliza seu perfil.
+2. **Criação de Atividades**: Usuários (com permissão) criam atividades, definindo tipo, local, data e visibilidade.
+3. **Participação**: Outros usuários podem se inscrever, pedir aprovação (em atividades privadas) e participar.
+4. **Check-in/Conclusão**: A participação é confirmada via check-in, e a conclusão da atividade gera XP e conquistas.
+5. **Progresso e Estatísticas**: Usuário acompanha seu progresso via dashboard (XP, níveis, badges, histórico).
+
+---
 
 ## Configuração do Ambiente
 
@@ -52,7 +83,7 @@ Este projeto consiste em uma API RESTful desenvolvida com Node.js, Express e Pri
 
 - Node.js (versão 16+)
 - PostgreSQL
-- Docker (opcional, para LocalStack)
+- Docker (opcional, para LocalStack ou ambiente de desenvolvimento completo)
 
 ### Variáveis de Ambiente
 
@@ -115,6 +146,8 @@ docker compose build
 docker compose up
 ```
 
+---
+
 ## Uso da API
 
 ### Documentação
@@ -161,6 +194,8 @@ A documentação completa da API está disponível em `/api-docs` quando o servi
 - `PUT /atividades/:id/conclude`: Concluir atividade (alternativo)
 - `POST /atividades/:id/complete`: Concluir atividade
 
+---
+
 ## Sistema de XP e Níveis
 
 Os usuários ganham XP pelas seguintes ações:
@@ -170,17 +205,19 @@ Os usuários ganham XP pelas seguintes ações:
 - Criar tipo de atividade: 20 XP
 - Completar atividade: Pontuação variável
 
-A progressão de níveis é automática baseada na quantidade de XP acumulada.
+A progressão de níveis é automática baseada na quantidade de XP acumulada. O cálculo dos níveis pode ser personalizado, mas normalmente utiliza-se uma curva crescente para tornar a progressão mais desafiadora com o tempo.
 
-## Testes
+---
 
-O projeto contém testes unitários e de integração para garantir o funcionamento correto das funcionalidades.
+## Segurança
 
-Para executar os testes:
+- **Senhas**: Armazenadas de forma segura utilizando bcrypt.
+- **Autenticação**: Realizada por JWT, garantindo acesso apenas a usuários autenticados.
+- **Validação de dados**: Realizada via Zod para evitar dados inválidos ou maliciosos.
+- **Controle de acesso**: Endpoints protegidos por middlewares de autenticação e autorização.
+- **Upload de arquivos**: Realizado de forma segura utilizando AWS S3/LocalStack com verificação de extensão e tamanho.
 
-```bash
-npm test
-```
+---
 
 ## Estrutura do Projeto
 
@@ -194,9 +231,16 @@ npm test
 │   ├── types/           # Definições de tipos TypeScript
 │   ├── utils/           # Utilitários
 │   └── index.ts         # Ponto de entrada
-├── tests/               # Testes automatizados
 └── package.json
 ```
+
+---
+
+## Contribuição
+
+Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou enviar pull requests.
+
+---
 
 ## Licença
 
